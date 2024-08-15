@@ -1,0 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Dosis:wght@200..800&display=swap');
+
+* {
+    font-family: "Dosis", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+}
+
+body {
+    padding: 20px;
+}
+
+.mapping {
+    display: flex;
+    align-items: center;
+    /* justify-content: center; */
+}
+
+.mapping > * {
+    margin-right: 10px;
+}
+
+.mapping > input {
+    flex: 1;
+}

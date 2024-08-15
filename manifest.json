@@ -1,0 +1,23 @@
+{
+    "manifest_version": 3,
+    "name": "JumpLink",
+    "version": "1.0",
+    "permissions": [
+        "storage"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "options_page": "options.html",
+    "action": {
+        "default_popup": "options.html"
+    },
+    "icons": {
+        "16": "jumplink.png",
+        "48": "jumplink.png",
+        "128": "jumplink.png"
+    },
+    "host_permissions": [
+        "<all_urls>"
+    ]
+}
