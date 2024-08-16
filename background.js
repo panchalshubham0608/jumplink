@@ -1,23 +1,39 @@
-chrome.webRequest.onBeforeRequest.addListener(
-    function (details) {
-        const url = new URL(details.url);
+// Initialize the extension by loading stored mappings and setting up rules
+chrome.runtime.onInstalled.addListener(async () => {
+    await updateRulesFromStorage();
+});
 
-        // Check if the URL starts with "jumplink/"
-        if (url.hostname === "jumplink") {
-            const path = url.pathname.substring(1); // Remove the leading "/"
-            const shortUrl = `jumplink/${path}`;
+// Function to update rules based on stored mappings
+async function updateRulesFromStorage() {
+    const { mappings } = await chrome.storage.sync.get("mappings");
 
-            // Retrieve the long URL from storage
-            chrome.storage.sync.get([shortUrl], function (result) {
-                if (result[shortUrl]) {
-                    // Redirect to the long URL
-                    chrome.tabs.update(details.tabId, { url: result[shortUrl] });
+    if (mappings) {
+        const rules = mappings.map((mapping, index) => ({
+            id: index + 1,
+            priority: 1,
+            action: {
+                type: "redirect",
+                redirect: {
+                    url: mapping.longUrl
                 }
-            });
-        }
+            },
+            condition: {
+                urlFilter: `*://*/*${mapping.shortUrl}*`,
+                resourceTypes: ["main_frame"]
+            }
+        }));
 
-        return {}; // No redirect by default
-    },
-    { urls: ["<all_urls>"] }, // Monitor all URLs
-    ["blocking"]
-);
+        // Clear existing rules and add new ones
+        await chrome.declarativeNetRequest.updateDynamicRules({
+            removeRuleIds: rules.map(rule => rule.id),
+            addRules: rules
+        });
+    }
+}
+
+// Listen for changes in storage to update rules
+chrome.storage.onChanged.addListener(async (changes, area) => {
+    if (area === "sync" && changes.mappings) {
+        await updateRulesFromStorage();
+    }
+});

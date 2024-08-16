@@ -1,10 +1,13 @@
 {
     "manifest_version": 3,
     "name": "JumpLink",
+    "description": "JumpLink is a Chrome extension that allows users to manage URL mappings using a custom short URL prefix (`jump/`). The extension provides a simple interface for adding, editing, and deleting mappings between short URLs and long URLs, and automatically redirects short URLs to their corresponding long URLs.",
     "version": "1.0",
     "permissions": [
-        "storage"
+        "storage",
+        "declarativeNetRequest"
     ],
+    "host_permissions": ["*://*/*"],
     "background": {
         "service_worker": "background.js"
     },
@@ -16,8 +19,5 @@
         "16": "jumplink.png",
         "48": "jumplink.png",
         "128": "jumplink.png"
-    },
-    "host_permissions": [
-        "<all_urls>"
-    ]
+    }
 }

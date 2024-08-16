@@ -1,26 +1,46 @@
 document.addEventListener('DOMContentLoaded', function () {
+    function log(...args) {
+        console.log("[JumpLink]", ...args);
+    }
+
+    // shows message content
+    function notify({ message, type }) {
+        let container = document.getElementById('alerts-container');
+        container.innerHTML += `
+<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+    ${message}
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>        `;
+    }
+
     const mappingsList = document.getElementById('mappings-list');
-    const addMappingButton = document.getElementById('add-mapping');
+    const addMappingForm = document.getElementById('add-mapping-form');
     const newShortUrlInput = document.getElementById('new-short-url');
     const newLongUrlInput = document.getElementById('new-long-url');
 
     // Load and display existing mappings
     function loadMappings() {
-        chrome.storage.sync.get(null, function (mappings) {
-            mappingsList.innerHTML = ''; // Clear the list
-
-            for (let shortUrl in mappings) {
-                addMappingElement(shortUrl, mappings[shortUrl]);
-            }
-
-            if (mappings.length === 0) {
+        chrome.storage.sync.get("mappings", function ({ mappings }) {
+            log("mappings", mappings);
+            if (mappings) {
+                mappingsList.innerHTML = ''; // Clear the list
+                for (let mapping of mappings) {
+                    addMappingElement({
+                        shortUrl: mapping.shortUrl,
+                        longUrl: mapping.longUrl,
+                    });
+                }
+                if (mappings.length === 0) {
+                    mappingsList.innerHTML = '<p>Nothing here yet. Add a new mapping to get started!</p>';
+                }
+            } else {
                 mappingsList.innerHTML = '<p>Nothing here yet. Add a new mapping to get started!</p>';
             }
         });
     }
 
     // Add a mapping element to the DOM
-    function addMappingElement(shortUrl, longUrl) {
+    function addMappingElement({ shortUrl, longUrl }) {
         const mappingDiv = document.createElement('div');
         mappingDiv.className = 'mapping';
 
@@ -38,18 +58,13 @@ document.addEventListener('DOMContentLoaded', function () {
         saveButton.className = 'btn btn-success';
         saveButton.onclick = function () {
             const updatedLongUrl = longInput.value;
-            chrome.storage.sync.set({ [shortUrl]: updatedLongUrl }, loadMappings);
-            notify({message: 'Mapping updated successfully.', type: 'success'});
+            updateMapping({ shortUrl, longUrl: updatedLongUrl });
         };
 
         const deleteButton = document.createElement('button');
         deleteButton.textContent = 'Delete';
         deleteButton.className = 'btn btn-danger';
-        deleteButton.onclick = function () {
-            if (!confirm('Are you sure you want to delete this mapping?')) return;
-            chrome.storage.sync.remove(shortUrl, loadMappings);
-            notify({message: 'Mapping removed successfully.', type: 'success'});
-        };
+        deleteButton.onclick = () => deleteMapping(shortUrl);
 
         mappingDiv.appendChild(shortInput);
         mappingDiv.appendChild(longInput);
@@ -58,38 +73,69 @@ document.addEventListener('DOMContentLoaded', function () {
         mappingsList.appendChild(mappingDiv);
     }
 
-    // shows message content
-    function notify({message, type}) {
-        let container = document.getElementById('alerts-container');
-        container.innerHTML += `
-<div class="alert alert-${danger} alert-dismissible fade show" role="alert">
-    ${message}
-  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>        `;
+    function updateMapping({ shortUrl, longUrl}) {
+        chrome.storage.sync.get("mappings", function ({ mappings }){
+            log("mappings", mappings);
+            if (mappings) {
+                let index = mappings.findIndex(mapping => mapping.shortUrl === shortUrl);
+                if (index !== -1) {
+                    log("updating", mappings[index]);
+                    let mapping = mappings[index];
+                    mapping.longUrl = longUrl;
+                    chrome.storage.sync.set({ mappings }, function(){
+                        notify({ message: 'Mapping updated successfully.', type: 'success' });
+                        loadMappings();    
+                    });
+                }
+            }
+        });
+    }
+
+    function deleteMapping(shortUrl) {
+        if (!confirm('Are you sure you want to delete this mapping?')) return;
+        chrome.storage.sync.get("mappings", function ({ mappings }) {
+            log("mappings", mappings);
+            if (mappings) {
+                let index = mappings.findIndex(mapping => mapping.shortUrl === shortUrl);
+                if (index !== -1) {
+                    log("deleting", mappings[index]);
+                    mappings.splice(index, 1);
+                    chrome.storage.sync.set({ mappings }, function(){
+                        notify({ message: 'Mapping removed successfully.', type: 'success' });
+                        loadMappings();
+                    });
+                }
+            }
+        });
     }
 
     // Add new mapping with a check for duplicates
-    addMappingButton.onclick = function () {
+    addMappingForm.onsubmit = function (event) {
+        event.preventDefault();
+        event.stopPropagation();
         const shortUrl = `jump/${newShortUrlInput.value.trim()}`;
         const longUrl = newLongUrlInput.value.trim();
 
         if (shortUrl && longUrl) {
-            // Check if the short URL already exists
-            chrome.storage.sync.get(shortUrl, function (result) {
-                if (result[shortUrl]) {
-                    notify({message: 'This keyword already exists. Please choose a different one.', type: 'danger'});
-                } else {
-                    // If not, add the new mapping
-                    chrome.storage.sync.set({ [shortUrl]: longUrl }, function () {
-                        newShortUrlInput.value = '';
-                        newLongUrlInput.value = '';
-                        loadMappings();
+            chrome.storage.sync.get("mappings", function({ mappings }){
+                log("mappings", mappings);
+                const updatedMappings = mappings ? [...mappings] : [];
+                // Ensure no duplicate short URL exists
+                let index = updatedMappings.findIndex(mapping => mapping.shortUrl === shortUrl);
+                if (index === -1) {
+                    log("adding", { shortUrl, longUrl });
+                    updatedMappings.push({ shortUrl, longUrl });
+                    chrome.storage.sync.set({ mappings: updatedMappings }, function() {
+                        notify({ message: 'New mapping added successfully.', type: 'success' });
+                        loadMappings();    
                     });
-                    notify({message: 'New mapping added successfully.', type: 'success'});
+                } else {
+                    log("already exist", updatedMappings[index]);
+                    notify({ message: 'This keyword already exists. Please choose a different one.', type: 'danger' });
                 }
             });
         } else {
-            notify({message: 'Please enter both a short URL and a long URL.', type: 'danger'});
+            notify({ message: 'Please enter both a short URL and a long URL.', type: 'danger' });
         }
     };
 
