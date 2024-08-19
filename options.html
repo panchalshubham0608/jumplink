@@ -1,19 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
   <link rel="stylesheet" href="libs/bootstrap/css/bootstrap.min.css">
   <link rel="stylesheet" href="style.css">
   <link rel="shortcut icon" href="jumplink.png" type="image/x-icon">
   <title>Jump Link</title>
 </head>
+
 <body>
   <div>
-    <div>
+    <div class="d-flex align-items-center justify-content-between">
       <h2><img src="jumplink.png" alt="logo" width="30" /> Jump Link</h2>
-      <hr/>
+      <div>
+        <button class="btn btn-primary" id="import-btn">Import</button>
+        <button class="btn btn-success" id="export-btn">Export</button>
+      </div>
     </div>
+    <hr />
 
     <div id="alerts-container">
     </div>
@@ -28,9 +35,10 @@
           </div>
           <div class="col mb-3">
             <label for="new-long-url" class="form-label">Long Url</label>
-            <input type="text" class="form-control" id="new-long-url" placeholder="https://www.example.com/docs/v1/intro">
+            <input type="text" class="form-control" id="new-long-url"
+              placeholder="https://www.example.com/docs/v1/intro">
           </div>
-          <div class="col d-flex align-items-center">
+          <div class="col mb-3 d-flex align-items-end">
             <button type="submit" id="add-mapping" class="btn btn-primary">Add</button>
           </div>
         </div>
@@ -39,9 +47,30 @@
 
     <div class="mt-3">
       <h3>Existing links</h3>
-      <hr/>
+      <hr />
       <div id="mappings-list">
         <p>Nothing here yet. Add a new link to get started!</p>
+      </div>
+    </div>
+
+    <!-- Modal Structure -->
+    <div id="import-modal" class="modal">
+      <div class="modal-content">
+        <div class="d-flex align-items-center justify-content-between">
+          <h2 class="m-0">Import mappings</h2>
+          <span class="close" id="close-modal">&times;</span>
+        </div>
+        <hr class="m-0"/>
+        <div class="mt-3">
+          <input type="file" id="fileInput" accept=".json" />
+        </div>
+        <div>
+          <div class="mt-3" id="table-container"></div>
+          <div class="text-end mt-3">
+            <button class="btn btn-danger" id="cancel-import-btn">Cancel</button>
+            <button class="btn btn-success" id="import-mappings-btn">Add</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -49,4 +78,5 @@
   <script src="libs/bootstrap/js/bootstrap.bundle.min.js"></script>
   <script src="options.js"></script>
 </body>
+
 </html>
