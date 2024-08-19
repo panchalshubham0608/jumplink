@@ -2,7 +2,7 @@
 
 ## Overview
 
-JumpLink is a Chrome extension that allows users to manage URL mappings using a custom short URL prefix (`jump/`). The extension provides a simple interface for adding, editing, and deleting mappings between short URLs and long URLs, and automatically redirects short URLs to their corresponding long URLs.
+JumpLink is a Chrome extension that allows users to manage URL mappings using a custom short URL prefix (`jump <keyword>`). The extension provides a simple interface for adding, editing, and deleting mappings between short URLs and long URLs, and automatically redirects short URLs to their corresponding long URLs.
 
 ## Features
 
@@ -36,7 +36,7 @@ Click on the JumpLink icon in the Chrome toolbar and navigate to the options pag
 - Delete Mappings: Click "Delete" next to a mapping to remove it.
 
 [3] Use Short URLs
-Type a short URL in the browser's address bar (e.g., jump/docs) to be redirected to the corresponding long URL.
+Type a short URL in the browser's address bar (e.g., jump docs) to be redirected to the corresponding long URL.
 
 ## Contributing
 Contributions are welcome! Please fork the repository and submit a pull request with your changes.

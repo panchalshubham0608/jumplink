@@ -13,6 +13,11 @@ document.addEventListener('DOMContentLoaded', function () {
 </div>        `;
     }
 
+    function isValidKeyword(keyword) {
+        const regex = /^[^\s]+$/; // Matches any string without spaces
+        return regex.test(keyword);
+      }
+
     const mappingsList = document.getElementById('mappings-list');
     const addMappingForm = document.getElementById('add-mapping-form');
     const newShortUrlInput = document.getElementById('new-short-url');
@@ -20,17 +25,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Load and display existing mappings
     function loadMappings() {
-        chrome.storage.sync.get("mappings", function ({ mappings }) {
+        chrome.storage.sync.get("mappings", function (data) {
+            const mappings = data.mappings || {};
             log("mappings", mappings);
             if (mappings) {
                 mappingsList.innerHTML = ''; // Clear the list
-                for (let mapping of mappings) {
-                    addMappingElement({
-                        shortUrl: mapping.shortUrl,
-                        longUrl: mapping.longUrl,
-                    });
+                for (let shortUrl in mappings) {
+                    if (mappings.hasOwnProperty(shortUrl)) {
+                        let longUrl = mappings[shortUrl];
+                        addMappingElement({ shortUrl, longUrl });    
+                    }
                 }
-                if (mappings.length === 0) {
+                if (Object.keys(mappings).length === 0) {
                     mappingsList.innerHTML = '<p>Nothing here yet. Add a new mapping to get started!</p>';
                 }
             } else {
@@ -45,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function () {
         mappingDiv.className = 'mapping';
 
         const shortInput = document.createElement('input');
-        shortInput.value = shortUrl;
+        shortInput.value = `jump ${shortUrl}`;
         shortInput.className = "form-control";
         shortInput.disabled = true;
 
@@ -74,14 +80,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updateMapping({ shortUrl, longUrl}) {
-        chrome.storage.sync.get("mappings", function ({ mappings }){
+        chrome.storage.sync.get("mappings", function (data){
+            const mappings = data.mappings || {};
             log("mappings", mappings);
             if (mappings) {
-                let index = mappings.findIndex(mapping => mapping.shortUrl === shortUrl);
-                if (index !== -1) {
-                    log("updating", mappings[index]);
-                    let mapping = mappings[index];
-                    mapping.longUrl = longUrl;
+                if (mappings.hasOwnProperty(shortUrl)) {
+                    mappings[shortUrl] = longUrl;
                     chrome.storage.sync.set({ mappings }, function(){
                         notify({ message: 'Mapping updated successfully.', type: 'success' });
                         loadMappings();    
@@ -93,13 +97,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function deleteMapping(shortUrl) {
         if (!confirm('Are you sure you want to delete this mapping?')) return;
-        chrome.storage.sync.get("mappings", function ({ mappings }) {
+        chrome.storage.sync.get("mappings", function (data) {
+            const mappings = data.mappings || {};
             log("mappings", mappings);
             if (mappings) {
-                let index = mappings.findIndex(mapping => mapping.shortUrl === shortUrl);
-                if (index !== -1) {
-                    log("deleting", mappings[index]);
-                    mappings.splice(index, 1);
+                if (mappings.hasOwnProperty(shortUrl)) {
+                    delete mappings[shortUrl];
                     chrome.storage.sync.set({ mappings }, function(){
                         notify({ message: 'Mapping removed successfully.', type: 'success' });
                         loadMappings();
@@ -113,19 +116,20 @@ document.addEventListener('DOMContentLoaded', function () {
     addMappingForm.onsubmit = function (event) {
         event.preventDefault();
         event.stopPropagation();
-        const shortUrl = `jump/${newShortUrlInput.value.trim()}`;
+        const shortUrl = newShortUrlInput.value.trim();
+        if (!isValidKeyword(shortUrl)) {
+            notify({ message: "Keyword should not contain whitespaces.", type: "danger"});
+            return;
+        }
         const longUrl = newLongUrlInput.value.trim();
 
         if (shortUrl && longUrl) {
-            chrome.storage.sync.get("mappings", function({ mappings }){
+            chrome.storage.sync.get("mappings", function(data){
+                const mappings = data.mappings || {};
                 log("mappings", mappings);
-                const updatedMappings = mappings ? [...mappings] : [];
-                // Ensure no duplicate short URL exists
-                let index = updatedMappings.findIndex(mapping => mapping.shortUrl === shortUrl);
-                if (index === -1) {
-                    log("adding", { shortUrl, longUrl });
-                    updatedMappings.push({ shortUrl, longUrl });
-                    chrome.storage.sync.set({ mappings: updatedMappings }, function() {
+                if (!mappings.hasOwnProperty(shortUrl)) {
+                    mappings[shortUrl] = longUrl;
+                    chrome.storage.sync.set({ mappings }, function() {
                         notify({ message: 'New mapping added successfully.', type: 'success' });
                         loadMappings();    
                     });
