@@ -1,16 +1,25 @@
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
     function log(...args) {
         console.log("[JumpLink]", ...args);
+    }
+
+    function generateRandomId(length = 8) {
+        return Math.random().toString(36).substr(2, length);
     }
 
     // shows message content
     function notify({ message, type }) {
         let container = document.getElementById('alerts-container');
+        let closeBtnId = generateRandomId();
         container.innerHTML += `
 <div class="alert alert-${type} alert-dismissible fade show" role="alert">
     ${message}
-  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  <button type="button" id="${closeBtnId}" class="btn-close"  data-bs-dismiss="alert" aria-label="Close"></button>
 </div>        `;
+        setTimeout(() => {
+            let closeBtn = document.getElementById(closeBtnId);
+            if (closeBtn) closeBtn.click();
+        }, 5000);
     }
 
     function isValidKeyword(keyword) {
@@ -31,25 +40,24 @@ document.addEventListener('DOMContentLoaded', function () {
     const importMappingsButton = document.getElementById('import-mappings-btn');
 
     // Load and display existing mappings
-    function loadMappings() {
-        chrome.storage.sync.get("mappings", function (data) {
-            const mappings = data.mappings || {};
-            log("mappings", mappings);
-            if (mappings) {
-                mappingsList.innerHTML = ''; // Clear the list
-                for (let shortUrl in mappings) {
-                    if (mappings.hasOwnProperty(shortUrl)) {
-                        let longUrl = mappings[shortUrl];
-                        addMappingElement({ shortUrl, longUrl });
-                    }
+    async function loadMappings() {
+        const data = await chrome.storage.sync.get("mappings");
+        const mappings = data.mappings || {};
+        log("mappings", mappings);
+        if (mappings) {
+            mappingsList.innerHTML = ''; // Clear the list
+            for (let shortUrl in mappings) {
+                if (mappings.hasOwnProperty(shortUrl)) {
+                    let longUrl = mappings[shortUrl];
+                    addMappingElement({ shortUrl, longUrl });
                 }
-                if (Object.keys(mappings).length === 0) {
-                    mappingsList.innerHTML = '<p>Nothing here yet. Add a new mapping to get started!</p>';
-                }
-            } else {
+            }
+            if (Object.keys(mappings).length === 0) {
                 mappingsList.innerHTML = '<p>Nothing here yet. Add a new mapping to get started!</p>';
             }
-        });
+        } else {
+            mappingsList.innerHTML = '<p>Nothing here yet. Add a new mapping to get started!</p>';
+        }
     }
 
     // Add a mapping element to the DOM
@@ -69,15 +77,15 @@ document.addEventListener('DOMContentLoaded', function () {
         const saveButton = document.createElement('button');
         saveButton.textContent = 'Save';
         saveButton.className = 'btn btn-success';
-        saveButton.onclick = function () {
+        saveButton.onclick = async function () {
             const updatedLongUrl = longInput.value;
-            updateMapping({ shortUrl, longUrl: updatedLongUrl });
+            await updateMapping({ shortUrl, longUrl: updatedLongUrl });
         };
 
         const deleteButton = document.createElement('button');
         deleteButton.textContent = 'Delete';
         deleteButton.className = 'btn btn-danger';
-        deleteButton.onclick = () => deleteMapping(shortUrl);
+        deleteButton.onclick = async () => await deleteMapping(shortUrl);
 
         mappingDiv.appendChild(shortInput);
         mappingDiv.appendChild(longInput);
@@ -86,40 +94,38 @@ document.addEventListener('DOMContentLoaded', function () {
         mappingsList.appendChild(mappingDiv);
     }
 
-    function updateMapping({ shortUrl, longUrl }) {
-        chrome.storage.sync.get("mappings", function (data) {
-            const mappings = data.mappings || {};
-            log("mappings", mappings);
-            if (mappings) {
-                if (mappings.hasOwnProperty(shortUrl)) {
-                    mappings[shortUrl] = longUrl;
-                    chrome.storage.sync.set({ mappings }, function () {
-                        notify({ message: 'Mapping updated successfully.', type: 'success' });
-                        loadMappings();
-                    });
-                }
+    async function updateMapping({ shortUrl, longUrl }) {
+        const data = await chrome.storage.sync.get("mappings");
+        const mappings = data.mappings || {};
+        log("mappings", mappings);
+        if (mappings) {
+            if (mappings.hasOwnProperty(shortUrl)) {
+                let updatedMappings = { ...mappings };
+                updatedMappings[shortUrl] = longUrl;
+                await chrome.storage.sync.set({ mappings: updatedMappings });
+                notify({ message: 'Mapping updated successfully.', type: 'success' });
+                await loadMappings();
             }
-        });
+        }
     }
 
-    function deleteMapping(shortUrl) {
+    async function deleteMapping(shortUrl) {
         if (!confirm('Are you sure you want to delete this mapping?')) return;
-        chrome.storage.sync.get("mappings", function (data) {
-            const mappings = data.mappings || {};
-            log("mappings", mappings);
-            if (mappings) {
-                if (mappings.hasOwnProperty(shortUrl)) {
-                    delete mappings[shortUrl];
-                    chrome.storage.sync.set({ mappings }, function () {
-                        notify({ message: 'Mapping removed successfully.', type: 'success' });
-                        loadMappings();
-                    });
-                }
+        const data = await chrome.storage.sync.get("mappings");
+        const mappings = data.mappings || {};
+        log("mappings", mappings);
+        if (mappings) {
+            if (mappings.hasOwnProperty(shortUrl)) {
+                let updatedMappings = { ...mappings };
+                delete updatedMappings[shortUrl];
+                await chrome.storage.sync.set({ mappings: updatedMappings });
+                notify({ message: 'Mapping removed successfully.', type: 'success' });
+                await loadMappings();
             }
-        });
+        }
     }
 
-    function addNewMapping({ shortUrl, longUrl, debug }) {
+    async function addNewMapping({ shortUrl, longUrl, debug }) {
         if (!isValidKeyword(shortUrl)) {
             notify({ message: `Keyword "${shortUrl}" should not contain whitespaces.`, type: "danger" });
             return;
@@ -127,35 +133,35 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (shortUrl && longUrl) {
             log("adding", shortUrl, longUrl);
-            chrome.storage.sync.get("mappings", function (data) {
-                const mappings = data.mappings || {};
-                log("mappings", mappings);
-                if (!mappings.hasOwnProperty(shortUrl)) {
-                    let updatedMappings = {...mappings};
-                    updatedMappings[shortUrl] = longUrl;
-                    chrome.storage.sync.set({ mappings: updatedMappings }, function () {
-                        if (debug) {
-                            notify({ message: 'New mapping added successfully.', type: 'success' });
-                        }
-                        loadMappings();
-                    });
-                } else {
-                    log(`already exist: ${shortUrl} -> ${mappings[shortUrl]}`);
-                    notify({ message: `Keyword ${shortUrl} already exists. Please choose a different one.`, type: 'danger' });
+            const data = await chrome.storage.sync.get("mappings");
+            const mappings = data.mappings || {};
+            log("mappings", mappings);
+            if (!mappings.hasOwnProperty(shortUrl)) {
+                let updatedMappings = { ...mappings };
+                updatedMappings[shortUrl] = longUrl;
+                await chrome.storage.sync.set({ mappings: updatedMappings });
+                if (debug) {
+                    notify({ message: 'New mapping added successfully.', type: 'success' });
+                    newShortUrlInput.value = '';
+                    newLongUrlInput.value = '';
                 }
-            });
+                await loadMappings();
+            } else {
+                log(`already exist: ${shortUrl} -> ${mappings[shortUrl]}`);
+                notify({ message: `Keyword ${shortUrl} already exists. Please choose a different one.`, type: 'danger' });
+            }
         } else {
             notify({ message: 'Please provide both a short URL and a long URL.', type: 'danger' });
         }
     }
 
     // Add new mapping with a check for duplicates
-    addMappingForm.onsubmit = function (event) {
+    addMappingForm.onsubmit = async function (event) {
         event.preventDefault();
         event.stopPropagation();
         const shortUrl = newShortUrlInput.value;
         const longUrl = newLongUrlInput.value;
-        addNewMapping({ shortUrl, longUrl, debug: true });
+        await addNewMapping({ shortUrl, longUrl, debug: true });
     };
 
     // Add click handler to export button
@@ -195,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function () {
     closeModal.onclick = function () {
         importModal.style.display = 'none';
     }
-    cancelImportBtn.onclick = function(){
+    cancelImportBtn.onclick = function () {
         importModal.style.display = 'none';
     }
 
@@ -282,15 +288,14 @@ document.addEventListener('DOMContentLoaded', function () {
         tableContainer.appendChild(table);
 
         // add click listener to button
-        importMappingsButton.onclick = function(){
+        importMappingsButton.onclick = async function () {
             closeModal.click();
-            Object.entries(mappings).forEach(entry => {
-                const [shortUrl, longUrl] = entry;
-                addNewMapping({ shortUrl, longUrl, debug: false });                
-            });
+            for (const [shortUrl, longUrl] of Object.entries(mappings)) {
+                await addNewMapping({ shortUrl, longUrl, debug: false });
+            }
         };
     }
 
     // Initial load
-    loadMappings();
+    await loadMappings();
 });
