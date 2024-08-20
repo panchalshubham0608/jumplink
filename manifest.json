@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "JumpLink",
     "description": "Instantly navigate with custom short URLs. Simplify your browsing with a quick `jump <keyword>`",
-    "version": "1.0",
+    "version": "1.0.1",
     "permissions": [
         "storage",
         "tabs"
