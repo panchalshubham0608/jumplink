@@ -1,0 +1,38 @@
+name: Validate Branch Name
+
+on:
+  push:
+    branches:
+      - 'v*'  # Triggers on branches that start with 'v'
+
+jobs:
+  validate-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Extract branch name
+        id: branch_name
+        run: echo "::set-output name=branch_name::${GITHUB_REF##*/}"
+
+      - name: Read version from manifest.json
+        id: read_version
+        run: |
+          VERSION=$(jq -r '.version' manifest.json)
+          echo "::set-output name=version::${VERSION}"
+
+      - name: Validate branch name
+        run: |
+          BRANCH_VERSION="${{ steps.branch_name.outputs.branch_name }}"
+          MANIFEST_VERSION="${{ steps.read_version.outputs.version }}"
+          
+          # Strip the 'v' from the branch name
+          BRANCH_VERSION="${BRANCH_VERSION#v}"
+
+          if [ "$BRANCH_VERSION" != "$MANIFEST_VERSION" ]; then
+            echo "Branch version ($BRANCH_VERSION) does not match version in manifest.json ($MANIFEST_VERSION)."
+            exit 1
+          else
+            echo "Branch version matches the version in manifest.json."
+          fi
