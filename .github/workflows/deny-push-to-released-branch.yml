@@ -1,0 +1,29 @@
+name: Deny Push to Released Branches
+
+on:
+  push:
+    branches:
+      - 'v*'  # Triggers on branches that start with 'v'
+
+jobs:
+  check-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Extract branch name
+        id: branch_name
+        run: echo "::set-output name=branch_name::${GITHUB_REF##*/}"
+
+      - name: Check for existing release
+        run: |
+          BRANCH_NAME="${{ steps.branch_name.outputs.branch_name }}"
+          RELEASE_TAG=$(git tag --list "${BRANCH_NAME}")
+
+          if [ -n "$RELEASE_TAG" ]; then
+            echo "Branch ${BRANCH_NAME} has already been released as ${RELEASE_TAG}. Pushing to this branch is not allowed."
+            exit 1
+          else
+            echo "Branch ${BRANCH_NAME} has no existing release. Push allowed."
+          fi
