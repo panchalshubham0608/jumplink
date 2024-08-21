@@ -6,7 +6,9 @@ on:
       - 'v*'  # Triggers on branches that start with 'v'
     paths-ignore:
       - 'main'     # Explicitly exclude the 'main' branch
-
+  create:
+    branches:
+      - 'v*'  # Triggers when branches that start with 'v' are created
 jobs:
   validate-version:
     runs-on: ubuntu-latest
