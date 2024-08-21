@@ -9,6 +9,7 @@ on:
   create:
     branches:
       - 'releases/*'  # Triggers when branches that start with 'v' are created
+  workflow_dispatch:  # Allow manual triggers
 
 jobs:
   validate-version:
