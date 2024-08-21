@@ -3,12 +3,13 @@ name: Validate Branch Name
 on:
   push:
     branches:
-      - 'v*'  # Triggers on branches that start with 'v'
+      - 'releases/*'  # Triggers on branches that start with 'v'
     paths-ignore:
       - 'main'     # Explicitly exclude the 'main' branch
   create:
     branches:
-      - 'v*'  # Triggers when branches that start with 'v' are created
+      - 'releases/*'  # Triggers when branches that start with 'v' are created
+
 jobs:
   validate-version:
     runs-on: ubuntu-latest
@@ -18,22 +19,25 @@ jobs:
 
       - name: Extract branch name
         id: branch_name
-        run: echo "::set-output name=branch_name::${GITHUB_REF##*/}"
+        run: |
+          BRANCH_NAME="${GITHUB_REF##*/}"  # Extract branch name (releases/v1.0.1)
+          BRANCH_VERSION="${BRANCH_NAME#releases/v}"  # Extract the version number (v1.0.1)
+          echo "Branch name: $BRANCH_NAME"
+          echo "Extracted version: $BRANCH_VERSION"
+          echo "::set-output name=branch_name::$BRANCH_NAME"
+          echo "::set-output name=version::$BRANCH_VERSION"
 
       - name: Read version from manifest.json
         id: read_version
         run: |
-          VERSION=$(jq -r '.version' manifest.json)
-          echo "::set-output name=version::${VERSION}"
+          MANIFEST_VERSION=$(grep -oP '(?<="version": ")[^"]*' manifest.json)
+          echo "::set-output name=version::${MANIFEST_VERSION}"
 
       - name: Validate branch name
         run: |
-          BRANCH_VERSION="${{ steps.branch_name.outputs.branch_name }}"
-          MANIFEST_VERSION="${{ steps.read_version.outputs.version }}"
+          BRANCH_VERSION="${{ steps.branch_name.outputs.branch_version }}"
+          MANIFEST_VERSION="${{ steps.read_version.outputs.manifest_version }}"
           
-          # Strip the 'v' from the branch name
-          BRANCH_VERSION="${BRANCH_VERSION#v}"
-
           if [ "$BRANCH_VERSION" != "$MANIFEST_VERSION" ]; then
             echo "Branch version ($BRANCH_VERSION) does not match version in manifest.json ($MANIFEST_VERSION)."
             exit 1
