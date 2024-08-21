@@ -22,7 +22,7 @@ jobs:
         run: |
           echo "Extracting branch name and version..."
           BRANCH_NAME="${GITHUB_REF##*/}"  # Extract branch name (e.g., releases/v1.0.1)
-          VERSION="${BRANCH_NAME#releases/v}"  # Extract the version number (e.g., v1.0.1)
+          VERSION="${BRANCH_NAME##releases/v}"  # Extract the version number (e.g., v1.0.1)
           
           echo "Branch name: $BRANCH_NAME"
           echo "Extracted version: $VERSION"
