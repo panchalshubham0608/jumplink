@@ -3,45 +3,42 @@ name: Validate Branch Name
 on:
   push:
     branches:
-      - 'releases/*'  # Triggers on branches that start with 'v'
-    paths-ignore:
-      - 'main'     # Explicitly exclude the 'main' branch
+      - 'releases/v*'  # Match branches that start with 'releases/v'
   create:
     branches:
-      - 'releases/*'  # Triggers when branches that start with 'v' are created
+      - 'releases/v*'  # Match branches that start with 'releases/v'
   workflow_dispatch:  # Allow manual triggers
 
 jobs:
-  validate-version:
+  validate:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Extract branch name
-        id: branch_name
+      - name: Extract branch name and version
         run: |
-          BRANCH_NAME="${GITHUB_REF##*/}"  # Extract branch name (releases/v1.0.1)
-          BRANCH_VERSION="${BRANCH_NAME#releases/v}"  # Extract the version number (v1.0.1)
-          echo "Branch name: $BRANCH_NAME"
-          echo "Extracted version: $BRANCH_VERSION"
-          echo "::set-output name=branch_name::$BRANCH_NAME"
-          echo "::set-output name=version::$BRANCH_VERSION"
-
-      - name: Read version from manifest.json
-        id: read_version
-        run: |
-          MANIFEST_VERSION=$(grep -oP '(?<="version": ")[^"]*' manifest.json)
-          echo "::set-output name=version::${MANIFEST_VERSION}"
-
-      - name: Validate branch name
-        run: |
-          BRANCH_VERSION="${{ steps.branch_name.outputs.branch_version }}"
-          MANIFEST_VERSION="${{ steps.read_version.outputs.manifest_version }}"
+          echo "Extracting branch name and version..."
+          BRANCH_NAME="${GITHUB_REF##*/}"  # Extract branch name (e.g., releases/v1.0.1)
+          VERSION="${BRANCH_NAME#releases/v}"  # Extract the version number (e.g., v1.0.1)
           
-          if [ "$BRANCH_VERSION" != "$MANIFEST_VERSION" ]; then
-            echo "Branch version ($BRANCH_VERSION) does not match version in manifest.json ($MANIFEST_VERSION)."
+          echo "Branch name: $BRANCH_NAME"
+          echo "Extracted version: $VERSION"
+          
+          # Set environment variables
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Validate branch version matches manifest version
+        run: |
+          echo "Validating branch version with manifest version..."
+          MANIFEST_VERSION=$(grep -oP '(?<="version": ")[^"]*' manifest.json)
+          echo "Manifest version: $MANIFEST_VERSION"
+
+          if [[ "$VERSION" != "$MANIFEST_VERSION" ]]; then
+            echo "Branch version $VERSION does not match version $MANIFEST_VERSION in manifest.json."
             exit 1
-          else
-            echo "Branch version matches the version in manifest.json."
+          else:
+            echo "Branch version $VERSION matches the version in manifest.json."
           fi
