@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - 'v*'  # Triggers on branches that start with 'v'
+    paths-ignore:
+      - 'main'     # Explicitly exclude the 'main' branch
 
 jobs:
   validate-version:
