@@ -4,8 +4,7 @@
     "description": "Instantly navigate with custom short URLs. Simplify your browsing with a quick `jump <keyword>`",
     "version": "1.0.1",
     "permissions": [
-        "storage",
-        "tabs"
+        "storage"
     ],
     "background": {
         "service_worker": "background.js"
