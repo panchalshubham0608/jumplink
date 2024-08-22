@@ -38,6 +38,9 @@ Click on the JumpLink icon in the Chrome toolbar and navigate to the options pag
 [3] Use Short URLs
 Type a short URL in the browser's address bar (e.g., jump docs) to be redirected to the corresponding long URL.
 
+## Privacy Policy
+You can read our privacy policy [here](https://panchalshubham0608.github.io/jumplink/privacy-policy.html).
+
 ## Contributing
 Contributions are welcome! Please fork the repository and submit a pull request with your changes.
 
